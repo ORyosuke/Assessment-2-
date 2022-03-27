@@ -1,0 +1,269 @@
+---
+title: "Assessment-2"
+author: "Ryosuke Otsuka s4663911"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Use the same (=clone a repository) R Project for the assignment2 as you created for Assignment1. Create a new .rmd document "Assignment2.rmd"
+
+2. Use the provided csv file to complete the tasks below. The file needs to be uploaded to your project. You can use the variable name of your choice.
+
+
+```{r}
+Thanksgiving_meals <- read.csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2018/2018-11-20/thanksgiving_meals.csv")
+```
+
+
+3.  For each question below record your answer in the markdown document that will show the question, your code and the results.
+Your explanation of the data insights is VERY important as well as your code
+
+### Part 1: formatting RMarkdown document
+
+1. Create an Rmarkdown document with webpage as output (same as in setup)
+
+At the start of the output document include your name in italic font and 
+your student id in bold font as level 2 heading 
+
+
+Separate with a solid line 
+
+Include the title “Assignment 2” as level 1 heading 
+
+Separate with a solid line 
+
+List all tasks in the assignment as headings of the third level and include your results (=output) below each task showing your R code. 
+
+**Ryosuke Otsuka** 
+
+##s4663911
+
+#Assignment 2
+
+
+###1. Display the first 10 rows of the dataset using `kable()` function (1 marks). 
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(skimr)
+
+```
+
+
+
+```{r}
+kable(head(Thanksgiving_meals[, 1:10]), "pipe")
+```
+
+###2. Using `skim()` display the summary of variables. 
+
+```{r}
+skim(Thanksgiving_meals)
+```
+
+
+Think about the task to predict a family income based on their menu: what variables may be useful? Are all of them correct type?
+Write 2-3 sentences with your explanation. (2 marks)
+
+
+
+Think about the task to predict a community type or US_region based on their menu: what variables may be useful? Are all of them correct type? (2 marks)
+
+3. Use `fct_reorder` and `parse_number` functions to create a factor variable `family_income`(2 mark).
+
+```{r}
+Thanksgiving_meals <- Thanksgiving_meals %>%
+  mutate(family_income = fct_reorder(family_income, parse_number(age)))
+
+```
+
+```{r}
+skim(Thanksgiving_meals)
+```
+
+4. What is the number of people who celebrate? (1 mark)
+
+980ppl
+
+```{r}
+Thanksgiving_meals %>%
+  count(celebrate, name = "people") %>%
+  filter(!str_detect(celebrate, "No"))
+```
+
+5. What are categories and insights for each main dish served and the method it is prepared? (2 marks)
+
+```{r}
+Thanksgiving_meals %>%
+  count(main_dish, main_prep, sort = TRUE, name = "Total") %>%
+  filter(main_dish!= "I don't know", main_dish!=  "Other (please specify)", main_prep!= "I don't know",main_prep!= "Other (please specify)")%>%
+  na.omit(main_dish, main_prep)
+```
+
+6. Create 3 different data viz showing insights for main dish served and the method. Provide your own legend and use themes.
+Write 2-3 sentences with your explanation of each insight. (4 marks)
+
+```{r}
+library(ggplot2)
+
+Main <- Thanksgiving_meals %>%
+  filter(main_dish!= "I don't know", main_dish!=  "Other (please specify)", main_prep!= "I don't know",main_prep!= "Other (please specify)")
+
+Main %>%
+  ggplot(aes(main_dish, main_prep, col = main_dish)) +
+  geom_count() + 
+  coord_flip() + 
+  theme_bw() +
+  theme(legend.background = element_rect(fill="lightblue", 
+                                  size=0.5, linetype="solid"))
+
+```
+
+
+```{r}
+Main %>%
+  ggplot(aes(main_dish, main_prep, col = main_dish)) +
+  geom_col() + 
+  theme_bw() +
+  theme(legend.position='none')
+```
+
+
+
+7. How many use cranberry sauce? How many use gravy? 2marks
+
+```{r}
+
+```
+
+```{r}
+Thanksgiving_meals %>%
+  filter(!str_detect(gravy, "No")) %>%
+  count(gravy, name = "people")
+```
+
+
+
+8-9. What is the distribution of those who celebrate across income ranges. Create a data viz.
+Write 2-3 sentences with your explanation of each insight. (4 marks)
+
+
+```{r}
+library(ggplot2)
+
+Thanksgiving_meals %>%
+  filter(!str_detect(celebrate, "No")) %>%
+  filter(!str_detect(family_income, "Prefer not to answer")) -> Thanksgiving_meals_celebration
+
+Thanksgiving_meals_celebration %>% 
+  filter(!is.na(family_income)) %>%
+  ggplot(aes(celebrate, family_income, col = "Yes")) + 
+  geom_jitter() +
+  theme_bw()
+
+```
+
+A family who has $125,000 to $199,999 does not tend to celebrate the thanks giving party if we compare other family. 
+
+10. Use the following code to create a new data set 2 mark
+```{r}
+Type_value <- Thanksgiving_meals %>%
+  select(id, starts_with("side"),
+         starts_with("pie"),
+         starts_with("dessert")) %>%
+  select(-side15, -pie13, -dessert12) %>%
+  gather(type, value, -id) %>%
+  filter(!is.na(value),
+         !value %in% c("None", "Other (please specify)")) %>%
+  mutate(type = str_remove(type, "\\d+"))
+```
+
+11-12. Intall package `widyr` and use `pairwise_cor()` function https://www.rdocumentation.org/packages/widyr/versions/0.1.3/topics/pairwise_cor
+Write 2-3 sentences with your explanation of what it does. (2 marks)
+
+```{r}
+#install.packages("widyr")
+library(widyr)
+library(dplyr)
+```
+
+This function can be used when we are to get the summary and test values of two different valuables that integrate together. 
+
+Use this code for the new dataset
+
+pairwise_cor(value, id, sort = TRUE)
+
+```{r}
+Thanksgiving_meals %>%
+  filter(!is.na(community_type), 
+         family_income!= "Prefer not to answer")%>%
+  pairwise_cor(us_region, community_type, id, sort = TRUE)
+```
+
+Write 1 sentence with your explanation of what insights it shows. (2 marks)
+
+It generates the collection value between community_type and us_region baced on id colum. 
+
+
+13. Use `lm()` or randomForest() function to build a model that predict a family income based on data in the dataset. 8 marks
+
+```{r}
+library(modeldata)
+library(tidymodels)
+
+library(tidyverse)
+library(skimr)
+
+```
+
+```{r}
+train_test_split <- initial_split(Thanksgiving_meals)
+
+Thanksgiving_train <- training(train_test_split)
+
+Thanlsgiving_test <- testing(train_test_split)
+
+```
+
+
+```{r}
+rec_obj <- recipe(data = Thanksgiving_train, family_income ~.)
+
+```
+
+
+```{r}
+rec_obj %>%
+  step_corr(all_predictors())
+```
+
+```{r}
+Thanksgiving_meals_prep <- prep(rec_obj, training = Thanksgiving_train)
+
+summary(Thanksgiving_meals_prep)
+```
+```{r}
+Thanksgiving_meals_bake <- bake(Thanksgiving_meals_prep, Thanksgiving_train)
+```
+
+Compare 3 models using different set of input variables. Use different number of variables.
+
+```{r}
+
+library(randomForest)
+
+rf <- randomForest(family_income ~ us_region + community_type, data = Thanksgiving_meals, na.action = na.omit)
+
+print(rf)
+
+```
+
+
+Explain your choice of variables (3 sentences) 
+
+Write 2 sentences explaining which model os best.
